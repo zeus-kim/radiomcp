@@ -130,29 +130,59 @@ def add_to_library(song_ids=None, album_ids=None):
             **({} if ok else {"error": d.get("error")})}
 
 
-def add_artist(artist, limit=15, sf=None):
-    """Find an artist and add their top songs to the user's library.
+def add_artist(artist, albums=5, sf=None):
+    """Add an artist's ALBUMS to the user's library (most reliable path).
 
-    After this, dj_play_set(provider='apple_music') can play them natively.
+    Adding whole albums lands tracks in the library reliably, where adding
+    individual catalog song IDs often silently no-ops. After this and a short
+    iCloud sync, dj_play_set(provider='apple_music') can play them natively.
     """
     sf = sf or storefront()
-    res = search_catalog(artist, types="artists", limit=1, sf=sf)
+    res = search_catalog(artist, types="albums", limit=albums, sf=sf)
     if res.get("error"):
         return {"status": "error", "error": res["error"]}
-    arts = res.get("artists", {}).get("data", [])
+    albs = res.get("albums", {}).get("data", [])
+    if not albs:
+        return {"status": "error", "error": f"no albums found for: {artist}"}
+    ids = [a["id"] for a in albs]
+    names = [a["attributes"].get("name") for a in albs]
+    aname = albs[0]["attributes"].get("artistName", artist)
+    r = add_to_library(album_ids=ids)
+    return {"status": r.get("status"), "artist": aname,
+            "added_albums": len(ids), "albums": names, "http": r.get("http")}
+
+
+def library_songs(artist, limit=25):
+    """Return names of the artist's songs currently in the user's library."""
+    q = urllib.parse.urlencode({"term": artist, "types": "library-songs",
+                                "limit": limit})
+    st, d = _request("GET", f"/v1/me/library/search?{q}")
+    if st != 200:
+        return []
+    data = d.get("results", {}).get("library-songs", {}).get("data", [])
+    out, seen = [], set()
+    for s in data:
+        nm = s.get("attributes", {}).get("name")
+        if nm and nm not in seen:
+            seen.add(nm)
+            out.append(nm)
+    return out
+
+
+def top_song_names(artist, limit=10, sf=None):
+    """Catalog top-song names for an artist (used as play queries / fallback)."""
+    sf = sf or storefront()
+    res = search_catalog(artist, types="artists", limit=1, sf=sf)
+    arts = res.get("artists", {}).get("data", []) if not res.get("error") else []
     if not arts:
-        return {"status": "error", "error": f"artist not found: {artist}"}
+        return []
     aid = arts[0]["id"]
-    aname = arts[0]["attributes"]["name"]
     st, d = _request("GET",
                      f"/v1/catalog/{sf}/artists/{aid}/view/top-songs?limit={limit}",
                      user=False)
-    songs = d.get("data", []) if st == 200 else []
-    ids = [s["id"] for s in songs]
-    names = [f'{aname} - {s["attributes"]["name"]}' for s in songs]
-    result = add_to_library(song_ids=ids) if ids else {"status": "error", "error": "no top songs"}
-    return {"status": result.get("status"), "artist": aname,
-            "added": len(ids), "songs": names, "http": result.get("http")}
+    if st != 200:
+        return []
+    return [s["attributes"]["name"] for s in d.get("data", [])]
 
 
 def add_album(album_query, sf=None):

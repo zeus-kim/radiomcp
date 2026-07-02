@@ -1,5 +1,11 @@
 # RadioCli / radiomcp - Changelog
 
+## v1.3.1 (2026-07-02)
+
+### One-shot artist special (small-model friendly)
+- `dj_play_artist(artist)`: single tool call that adds the artist's albums to the library, waits for iCloud sync, then plays natively with DJ commentary. Lets small local models do an artist special with one call.
+- `apple_add_artist` now adds **albums** (reliable) instead of individual song IDs (which often silently no-op). Added `library_songs` / `top_song_names` helpers.
+
 ## v1.3.0 (2026-07-02)
 
 ### Cross-instance playback lock (singleton)

@@ -4503,16 +4503,50 @@ def apple_search(term: str, types: str = "songs,artists,albums",
 
 
 @mcp.tool()
-def apple_add_artist(artist: str, limit: int = 15) -> dict:
-    """Add an artist's top songs to your Apple Music library so they can be
-    played natively by dj_play_set(provider='apple_music').
+def apple_add_artist(artist: str) -> dict:
+    """Add an artist's albums to your Apple Music library (reliable) so their
+    songs can be played natively by dj_play_set(provider='apple_music').
 
     Args:
-        artist: Artist name (e.g. "BLACKPINK").
-        limit: How many top songs to add.
+        artist: Artist name (e.g. "BLACKPINK", "혜은이").
     """
     from radiomcp import musickit as _mk
-    return _mk.add_artist(artist, limit=limit)
+    return _mk.add_artist(artist)
+
+
+@mcp.tool()
+def dj_play_artist(artist: str, count: int = 8,
+                   with_comments: bool = True) -> dict:
+    """One-shot artist special on Apple Music. Does everything internally:
+    add the artist's albums to the library, wait for iCloud sync, then play the
+    songs natively with DJ commentary. Ideal for small models — a single call.
+
+    Args:
+        artist: Artist name (e.g. "혜은이", "BLACKPINK").
+        count: How many songs to play.
+        with_comments: Insert DJ commentary between songs.
+    """
+    import time
+    from radiomcp import musickit as _mk
+
+    names = _mk.library_songs(artist, limit=count * 3)
+    if len(names) < 3:
+        _mk.add_artist(artist)  # add albums (reliable)
+        for _ in range(10):     # wait up to ~30s for iCloud sync
+            time.sleep(3)
+            names = _mk.library_songs(artist, limit=count * 3)
+            if len(names) >= min(count, 5):
+                break
+    if not names:
+        names = _mk.top_song_names(artist, limit=count)  # pre-sync fallback
+    if not names:
+        return {"status": "error", "error": f"could not find songs for {artist}"}
+
+    songs = [f"{artist} - {n}" for n in names[:count]]
+    res = _dj.start_dj_set(songs, provider="apple_music",
+                           slot_name=f"{artist} 특집", with_comments=with_comments)
+    res["queued"] = songs
+    return res
 
 
 @mcp.tool()
