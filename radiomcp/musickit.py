@@ -138,15 +138,26 @@ def add_artist(artist, albums=5, sf=None):
     iCloud sync, dj_play_set(provider='apple_music') can play them natively.
     """
     sf = sf or storefront()
-    res = search_catalog(artist, types="albums", limit=albums, sf=sf)
+    canon = canonical_artist(artist, sf=sf)
+    res = search_catalog(canon, types="albums", limit=25, sf=sf)
     if res.get("error"):
         return {"status": "error", "error": res["error"]}
     albs = res.get("albums", {}).get("data", [])
     if not albs:
         return {"status": "error", "error": f"no albums found for: {artist}"}
-    ids = [a["id"] for a in albs]
-    names = [a["attributes"].get("name") for a in albs]
-    aname = albs[0]["attributes"].get("artistName", artist)
+
+    # Keep only albums actually credited to this artist — skip multi-artist
+    # "hit collection" compilations (they pollute the library with other
+    # singers, e.g. a 혜은이 compilation containing 패티김 tracks).
+    cl = canon.lower()
+    def _own(a):
+        an = (a["attributes"].get("artistName") or "").lower()
+        return cl in an and "various" not in an
+    picked = [a for a in albs if _own(a)][:albums] or albs[:albums]
+
+    ids = [a["id"] for a in picked]
+    names = [a["attributes"].get("name") for a in picked]
+    aname = picked[0]["attributes"].get("artistName", canon)
     r = add_to_library(album_ids=ids)
     return {"status": r.get("status"), "artist": aname,
             "added_albums": len(ids), "albums": names, "http": r.get("http")}
