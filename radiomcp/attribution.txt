@@ -1,0 +1,5 @@
+Radio station data derived from Radio Browser
+https://www.radio-browser.info/
+
+Licensed under ODbL 1.0
+https://opendatacommons.org/licenses/odbl/

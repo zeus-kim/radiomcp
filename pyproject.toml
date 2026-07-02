@@ -1,0 +1,88 @@
+[project]
+name = "radiomcp"
+version = "1.2.7"
+description = "Internet radio MCP server + TUI player - 55,000+ stations, Airtune API, mpv playback"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "meshpop", email = "mpop@mpop.dev"}
+]
+keywords = [
+    "mcp",
+    "radio",
+    "internet-radio",
+    "streaming",
+    "claude",
+    "ai",
+    "music"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Internet",
+]
+dependencies = [
+    "mcp[cli]>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/meshpop/radiomcp"
+Repository = "https://github.com/meshpop/radiomcp"
+Issues = "https://github.com/meshpop/radiomcp/issues"
+
+[project.optional-dependencies]
+# audio = ["miniaudio>=1.60"]  # TODO:    
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["radiomcp"]
+artifacts = ["radiomcp/*.db", "radiomcp/*.json"]
+exclude = [
+    "radiomcp/cron_maintenance.sh",
+    "radiomcp/sync_from_unified.py",
+    "radiomcp/daily_maintenance.py",
+]
+
+# force-include removed: radio_stations.db already in radiomcp/ package dir
+# duplicate zip entry was breaking non-editable pip install
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "radiomcp/",
+    "radio_stations.db",
+    "pyproject.toml",
+    "README.md",
+    "LICENSE",
+    "DATA_LICENSE.md",
+    "ATTRIBUTION.md",
+    "DISCLAIMER.md",
+]
+exclude = [
+    "radiomcp/cron_maintenance.sh",
+    "radiomcp/sync_from_unified.py",
+    "radiomcp/daily_maintenance.py",
+    "**/__pycache__",
+    "**/*.pyc",
+]
+
+[project.scripts]
+radiomcp = "radiomcp:main"
+radio = "radiomcp.tui:main"

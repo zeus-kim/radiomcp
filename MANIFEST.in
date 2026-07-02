@@ -1,0 +1,8 @@
+include LICENSE
+include DATA_LICENSE.md
+include ATTRIBUTION.md
+include DISCLAIMER.md
+include README.md
+
+recursive-include radiomcp *.db
+recursive-include radiomcp *.json

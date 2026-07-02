@@ -1,0 +1,59 @@
+# Python
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+.venv*/
+
+# Database
+*.db
+*.db-journal
+
+# Secrets
+.env
+.env.*
+
+# IDE / AI
+.claude/
+.cursorrules
+CLAUDE.md
+AGENTS.md
+
+# Local / Internal
+TODO.md
+scripts/*/
+svdtest/
+docs/ARCHITECTURE_IDEAS.md
+docs/RADIO_API_RESEARCH.md
+docs/RADIO_DATA_STRATEGY.md
+docs/URL_DISCOVERY.md
+
+# OS
+.DS_Store
+Thumbs.db
+# Planning / internal docs (Korean, not for git)
+docs/RADIOGRAPH.md
+
+# More Python artifacts
+*.pyd
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+
+# Secrets / certs
+*.key
+*.pem
+# Internal infra docs — never commit
+ARCHITECTURE.md
+docs/ARCHITECTURE.md
+docs/API_ARCHITECTURE.md
+!radiomcp/radio_stations.db

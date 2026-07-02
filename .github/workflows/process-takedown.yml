@@ -1,0 +1,143 @@
+name: Process Takedown Request
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  process-takedown:
+    if: contains(github.event.issue.labels.*.name, 'takedown')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Parse issue and update blocklist
+        id: parse
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python3 - << 'PYEOF'
+          import json, os, re, sys
+          from datetime import datetime
+
+          body = os.environ.get("ISSUE_BODY", "")
+          title = os.environ.get("ISSUE_TITLE", "")
+          issue_num = os.environ.get("ISSUE_NUMBER", "0")
+
+          def extract_field(body, label):
+              pattern = rf"### {re.escape(label)}\s*\n\s*(.+?)\s*(?=###|$)"
+              m = re.search(pattern, body, re.DOTALL)
+              if m:
+                  val = m.group(1).strip()
+                  if val and val != "_No response_" and val != "None":
+                      return val
+              return ""
+
+          station_name = extract_field(body, "Station Name")
+          stream_url = extract_field(body, "Stream URL")
+          station_uuid = extract_field(body, "Station UUID")
+          reason = extract_field(body, "Reason for Takedown")
+
+          if not station_name and not stream_url and not station_uuid:
+              print("ERROR: No station identifier found in issue")
+              sys.exit(1)
+
+          bl_path = "blocklist.json"
+          try:
+              with open(bl_path, "r") as f:
+                  blocklist = json.load(f)
+          except:
+              blocklist = {"version": "1.0.0", "updated": "", "blocked": [], "blocked_urls": [], "blocked_uuids": []}
+
+          parts = blocklist.get("version", "1.0.0").split(".")
+          parts[-1] = str(int(parts[-1]) + 1)
+          blocklist["version"] = ".".join(parts)
+          blocklist["updated"] = datetime.now().strftime("%Y-%m-%d")
+
+          added = []
+
+          if station_name:
+              entry = {
+                  "pattern": station_name,
+                  "reason": f"Takedown request #{issue_num}: {reason[:100]}",
+                  "added": datetime.now().strftime("%Y-%m-%d")
+              }
+              if not any(b.get("pattern") == station_name for b in blocklist.get("blocked", [])):
+                  blocklist.setdefault("blocked", []).append(entry)
+                  added.append(f"pattern: {station_name}")
+
+          if stream_url:
+              if stream_url not in blocklist.get("blocked_urls", []):
+                  blocklist.setdefault("blocked_urls", []).append(stream_url)
+                  added.append(f"url: {stream_url}")
+
+          if station_uuid:
+              if station_uuid not in blocklist.get("blocked_uuids", []):
+                  blocklist.setdefault("blocked_uuids", []).append(station_uuid)
+                  added.append(f"uuid: {station_uuid}")
+
+          with open(bl_path, "w") as f:
+              json.dump(blocklist, f, indent=2, ensure_ascii=False)
+
+          summary = ", ".join(added) if added else "already blocked"
+          print(f"Blocklist updated: {summary}")
+
+          with open(os.environ.get("GITHUB_OUTPUT", "/dev/null"), "a") as f:
+              f.write(f"summary={summary}\n")
+              f.write(f"station={station_name}\n")
+          PYEOF
+
+      - name: Commit blocklist update
+        run: |
+          git config user.name "MeshPOP Bot"
+          git config user.email "mpop@mpop.dev"
+          git add blocklist.json
+          git diff --staged --quiet && echo "No changes" && exit 0
+          git commit -m "blocklist: takedown #${{ github.event.issue.number }} - ${{ steps.parse.outputs.station }}"
+          git push
+
+      - name: Comment on issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = '${{ steps.parse.outputs.summary }}';
+            const body = [
+              '## Takedown Processed',
+              '',
+              `The following entries have been added to the blocklist: **${summary}**`,
+              '',
+              'This will take effect for all RadioMCP clients on their next blocklist sync (within 1 hour).',
+              '',
+              'If you need immediate removal or have questions, contact mpop@mpop.dev.',
+              '',
+              '---',
+              '*This action was performed automatically by the RadioMCP takedown bot.*'
+            ].join('\n');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+            
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed',
+              labels: ['takedown', 'processed']
+            });

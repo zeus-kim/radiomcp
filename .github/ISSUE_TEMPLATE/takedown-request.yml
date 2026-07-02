@@ -1,0 +1,76 @@
+name: "Station Takedown Request"
+description: "Request removal of your radio station from RadioMCP"
+title: "[Takedown] "
+labels: ["takedown"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Station Takedown Request
+        If you are a broadcaster or rights holder and want your station removed from RadioMCP search results, please fill out this form.
+        Your station will be added to our blocklist and removed from all RadioMCP clients automatically.
+
+  - type: input
+    id: station_name
+    attributes:
+      label: Station Name
+      description: "The name of your radio station as it appears in RadioMCP"
+      placeholder: "e.g. My Radio Station"
+    validations:
+      required: true
+
+  - type: input
+    id: stream_url
+    attributes:
+      label: Stream URL
+      description: "The stream URL you want blocked (if known)"
+      placeholder: "e.g. https://stream.example.com/live"
+    validations:
+      required: false
+
+  - type: input
+    id: station_uuid
+    attributes:
+      label: Station UUID
+      description: "The radio-browser.info station UUID (if known)"
+      placeholder: "e.g. 12345678-abcd-1234-efgh-123456789abc"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: requester_role
+    attributes:
+      label: Your Role
+      options:
+        - Station Owner
+        - Authorized Representative
+        - Rights Holder
+        - Legal Representative
+    validations:
+      required: true
+
+  - type: input
+    id: contact_email
+    attributes:
+      label: Contact Email
+      description: "Email for verification (will not be published)"
+      placeholder: "you@example.com"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Reason for Takedown
+      description: "Brief explanation of why you want this station removed"
+      placeholder: "e.g. We do not authorize third-party aggregation of our stream"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: "I confirm that I am authorized to make this request on behalf of the station"
+          required: true
