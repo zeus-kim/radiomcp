@@ -152,6 +152,17 @@ def add_artist(artist, albums=5, sf=None):
             "added_albums": len(ids), "albums": names, "http": r.get("http")}
 
 
+def canonical_artist(query, sf=None):
+    """Resolve a (possibly localized) artist query to the catalog's canonical
+    artist name, e.g. '마이클잭슨' -> 'Michael Jackson'. Falls back to query."""
+    sf = sf or storefront()
+    res = search_catalog(query, types="artists", limit=1, sf=sf)
+    arts = res.get("artists", {}).get("data", []) if not res.get("error") else []
+    if arts:
+        return arts[0]["attributes"].get("name") or query
+    return query
+
+
 def library_songs(artist, limit=25):
     """Return names of the artist's songs currently in the user's library."""
     q = urllib.parse.urlencode({"term": artist, "types": "library-songs",

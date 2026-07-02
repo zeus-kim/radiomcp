@@ -4529,22 +4529,33 @@ def dj_play_artist(artist: str, count: int = 8,
     import time
     from radiomcp import musickit as _mk
 
-    names = _mk.library_songs(artist, limit=count * 3)
+    if not _mk.is_configured():
+        return {"status": "error",
+                "error": "Apple Music (MusicKit) is not set up. Run the MusicKit "
+                         "setup (developer token + user token) first, or use "
+                         "dj_play_set(provider='youtube')."}
+
+    # Use the catalog's canonical artist name so localized queries
+    # (e.g. '마이클잭슨') match the English library entries ('Michael Jackson').
+    canon = _mk.canonical_artist(artist) or artist
+
+    names = _mk.library_songs(canon, limit=count * 3)
     if len(names) < 3:
-        _mk.add_artist(artist)  # add albums (reliable)
+        _mk.add_artist(canon)   # add albums (reliable)
         for _ in range(10):     # wait up to ~30s for iCloud sync
             time.sleep(3)
-            names = _mk.library_songs(artist, limit=count * 3)
+            names = _mk.library_songs(canon, limit=count * 3)
             if len(names) >= min(count, 5):
                 break
     if not names:
-        names = _mk.top_song_names(artist, limit=count)  # pre-sync fallback
+        names = _mk.top_song_names(canon, limit=count)  # pre-sync fallback
     if not names:
         return {"status": "error", "error": f"could not find songs for {artist}"}
 
-    songs = [f"{artist} - {n}" for n in names[:count]]
+    songs = [f"{canon} - {n}" for n in names[:count]]
     res = _dj.start_dj_set(songs, provider="apple_music",
-                           slot_name=f"{artist} 특집", with_comments=with_comments)
+                           slot_name=f"{canon} 특집", with_comments=with_comments)
+    res["artist"] = canon
     res["queued"] = songs
     return res
 
