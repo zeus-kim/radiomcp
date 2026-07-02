@@ -49,7 +49,7 @@ Then just ask Claude:
 
 > "Play some late-night jazz"  
 > "Start a DJ set with K-pop hits"  
-> "Play IU from my Apple Music library"  
+> "Play Sim Soo-bong from my Apple Music library"  
 > "Show me a live news stream"  
 > "What's playing right now?"
 
@@ -197,7 +197,7 @@ pip install radiomcp && radiomcp
 Claude에게 말하기:
 
 > "재즈 틀어줘"  
-> "아이유 노래로 DJ 셋 시작해"  
+> "심수봉 노래로 DJ 셋 시작해"  
 > "내 애플 뮤직에서 BTS 틀어줘"  
 > "YTN 라이브 뉴스 보여줘"  
 > "지금 뭐 나와?"
