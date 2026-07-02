@@ -4489,6 +4489,52 @@ def dj_stop_video() -> dict:
 
 
 @mcp.tool()
+def apple_search(term: str, types: str = "songs,artists,albums",
+                 limit: int = 10) -> dict:
+    """Search the Apple Music catalog (requires MusicKit setup).
+
+    Args:
+        term: Search text (e.g. "BLACKPINK", "Kill This Love").
+        types: Comma list of songs,artists,albums,playlists.
+        limit: Max results per type.
+    """
+    from radiomcp import musickit as _mk
+    return _mk.search_catalog(term, types=types, limit=limit)
+
+
+@mcp.tool()
+def apple_add_artist(artist: str, limit: int = 15) -> dict:
+    """Add an artist's top songs to your Apple Music library so they can be
+    played natively by dj_play_set(provider='apple_music').
+
+    Args:
+        artist: Artist name (e.g. "BLACKPINK").
+        limit: How many top songs to add.
+    """
+    from radiomcp import musickit as _mk
+    return _mk.add_artist(artist, limit=limit)
+
+
+@mcp.tool()
+def apple_add_album(album_query: str) -> dict:
+    """Add a whole album to your Apple Music library.
+
+    Args:
+        album_query: "artist album" text (e.g. "BLACKPINK THE ALBUM").
+    """
+    from radiomcp import musickit as _mk
+    return _mk.add_album(album_query)
+
+
+@mcp.tool()
+def apple_add_to_library(song_ids: list | None = None,
+                         album_ids: list | None = None) -> dict:
+    """Add specific Apple Music catalog song/album IDs to the user's library."""
+    from radiomcp import musickit as _mk
+    return _mk.add_to_library(song_ids=song_ids, album_ids=album_ids)
+
+
+@mcp.tool()
 def dj_song_info(query: str, lang: str = "ko") -> dict:
     """Search for song/artist information. Returns easy-to-use data.
 

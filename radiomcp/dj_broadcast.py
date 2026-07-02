@@ -801,6 +801,18 @@ def _music_player_state():
     return (state or "").strip() if ok else ""
 
 
+def _music_current_pid():
+    """Persistent ID of Music.app's current track ('' if none/unknown)."""
+    ok, out = _osascript(
+        'tell application "Music" to get persistent ID of current track')
+    return (out or "").strip() if ok else ""
+
+
+def _music_pause():
+    """Pause Music.app (prevents auto-advance into unrelated library tracks)."""
+    _osascript('tell application "Music" to pause')
+
+
 def _split_artist_title(query):
     """Split 'Artist - Title' into (artist, title). Falls back to ('', query)."""
     if " - " in query:
@@ -1821,6 +1833,7 @@ def _dj_set_worker(songs, provider, slot_name, with_comments, comments=None, lan
                 started = False
                 duration = 0
                 actual = provider
+                track = None
 
                 if provider == "apple_music":
                     track = am_tracks.get(song) if am_tracks else resolve_library_track(song)
@@ -1831,6 +1844,9 @@ def _dj_set_worker(songs, provider, slot_name, with_comments, comments=None, lan
                         actual = "apple_music"
                     else:
                         # Not in library or playback failed → YouTube fallback.
+                        # Pause Music first so it can't auto-advance into other
+                        # library tracks (e.g. 안전지대) while YouTube plays.
+                        _music_pause()
                         _log_info(f"Apple Music unavailable, YouTube fallback: {song[:40]}")
                         url = _get_youtube_url(song)
                         if url and play_youtube_url(url, wait=True, stop_event=_dj_stop):
@@ -1860,6 +1876,7 @@ def _dj_set_worker(songs, provider, slot_name, with_comments, comments=None, lan
                 _update_stats("songs_played")
 
                 # Wait for the track to finish (user stop, natural end, or timeout).
+                started_pid = track["pid"] if (actual == "apple_music" and track) else None
                 if actual == "apple_music" and duration and duration > 0:
                     max_wait = int(duration) + 8
                 else:
@@ -1868,9 +1885,16 @@ def _dj_set_worker(songs, provider, slot_name, with_comments, comments=None, lan
                     if _dj_stop.is_set():
                         stop_all()
                         break
-                    if actual == "apple_music" and _music_player_state() == "stopped":
-                        break
+                    if actual == "apple_music":
+                        if _music_player_state() != "playing":
+                            break
+                        # Music auto-advanced to a different library track → stop the leak
+                        if started_pid and _music_current_pid() != started_pid:
+                            break
                     time.sleep(1)
+                # Keep Music from rolling into unrelated library tracks between songs
+                if actual == "apple_music":
+                    _music_pause()
                 break
 
         if not play_success and not _dj_stop.is_set():

@@ -1,5 +1,20 @@
 # RadioCli / radiomcp - Changelog
 
+## v1.3.0 (2026-07-02)
+
+### Cross-instance playback lock (singleton)
+- Shared stop token (`~/.radiocli/playback.stop`) + watcher thread: stop works from any client/instance, and playback never overlaps or respawns when multiple radiomcp instances run.
+
+### Windowed video playback
+- `dj_play_video` / `dj_stop_video`: play YouTube watch/live URLs (or a search) in an mpv window on the logged-in desktop via `launchctl asuser`; supervisor auto-refreshes expiring live streams.
+
+### Apple Music (MusicKit) catalog + library
+- `musickit.py`: developer token (ES256 JWT, auto-refreshed from `.p8`) + Music User Token. New tools `apple_search`, `apple_add_artist`, `apple_add_album`, `apple_add_to_library` — add catalog songs to the library so they play natively.
+
+### Fixes
+- Apple Music auto-advance leak fixed: Music is paused on track end / provider switch so unrelated library tracks no longer bleed into a set.
+- `dj_health` now reports `music_playing` / `audio_active` (Apple Music aware).
+
 ## v1.2.0 (2026-07-02)
 
 ### Apple Music Native Library Playback
