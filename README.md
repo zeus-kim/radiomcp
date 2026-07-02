@@ -49,7 +49,7 @@ Then just ask Claude:
 
 > "Play some late-night jazz"  
 > "Start a DJ set with K-pop hits"  
-> "Play Sim Soo-bong from my Apple Music library"  
+> "Play Bruno Mars from my Apple Music library"  
 > "Show me a live news stream"  
 > "What's playing right now?"
 
