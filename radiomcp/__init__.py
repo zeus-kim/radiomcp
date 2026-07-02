@@ -14,7 +14,7 @@ try:
     __version__ = _pkg_version("radiomcp")
 except Exception:
     __version__ = "1.2.7"
-__author__ = "meshpop"
+__author__ = "Zeus"
 
 from .server import main, mcp
 

@@ -114,7 +114,7 @@ RadioCli/
 | KBS, MBC, SBS | token based URL expiration |
 
 ### rock  
-GitHub Issues: https://github.com/meshpop/radiomcp/issues
+GitHub Issues: https://github.com/zeus-kim/radiomcp/issues
 
 ---
 
@@ -166,6 +166,6 @@ twine upload dist/*
 
 - [ ] PyPI  /
 - [ ] PyPI 
-- [ ] GitHub   (meshpop/radiomcp)
+- [ ] GitHub   (zeus-kim/radiomcp)
 - [ ] Cloudflare Pages  (blocklist )
 - [ ] MCP Registry rock
