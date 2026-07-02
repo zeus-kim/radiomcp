@@ -2586,6 +2586,14 @@ def stop() -> dict:
         player.stop()
         result["note"] = "Please close the browser tab manually"
 
+    # Also halt any DJ set / video / Music-app playback so a single "stop"
+    # silences everything (robust when a small model calls the wrong stop tool).
+    try:
+        from radiomcp import dj_broadcast as _djb
+        _djb.stop_everything()
+    except Exception:
+        pass
+
     current_station = None
     return result
 
@@ -4459,9 +4467,8 @@ def dj_play_set(artist: str = "", songs: list | None = None,
 
 @mcp.tool()
 def dj_stop() -> dict:
-    """Stop the current DJ set / all DJ playback."""
-    _dj.stop_dj_set()
-    return {"status": "stopped"}
+    """Stop ALL playback — DJ set, radio, video, and Music app."""
+    return _dj.stop_everything()
 
 
 @mcp.tool()
@@ -4484,8 +4491,8 @@ def dj_play_video(source: str, fullscreen: bool = False,
 
 @mcp.tool()
 def dj_stop_video() -> dict:
-    """Stop the windowed video player."""
-    return _dj.stop_video()
+    """Stop ALL playback (video, DJ set, radio, Music app)."""
+    return _dj.stop_everything()
 
 
 @mcp.tool()

@@ -1978,6 +1978,23 @@ def stop_dj_set():
     return {"status": "stopped"}
 
 
+def stop_everything():
+    """Stop ALL playback from any source — DJ set, radio stream, video, and the
+    Music app. Any 'stop' tool routes here so even a weak model that calls the
+    'wrong' stop still silences everything, across all instances.
+    """
+    _signal_global_stop()
+    _dj_stop.set()
+    try:
+        _video_stop.set()
+    except Exception:
+        pass
+    stop_all()  # pkill mpv (incl. video window) + pause Spotify/Music
+    subprocess.run(["pkill", "-f", "afplay"], capture_output=True)
+    _write_state({"status": "idle"})
+    return {"status": "stopped", "scope": "all"}
+
+
 # ============================================================
 # 24-Hour Scheduled Auto-Broadcast
 # ============================================================
