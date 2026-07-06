@@ -5913,7 +5913,6 @@ EXAMPLES:
         print("Run 'radiomcp help' for usage")
 
 
-def main():
 # ============================================================
 # Chart Tools - Spotify & Radio Charts
 # ============================================================
