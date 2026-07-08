@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import socket
 import sqlite3
@@ -5917,19 +5918,39 @@ EXAMPLES:
 # Chart Tools - Spotify & Radio Charts
 # ============================================================
 
+# AirTune sometimes returns ad/consumer-notice audio picked up by stream
+# watermarking as if it were a song, with the ad's domain injected as the
+# "artist" (e.g. artist="wellsfargo.com"). Filter those out client-side.
+_AD_ARTIST_RE = re.compile(
+    r"^(https?://)?(www\.)?[a-z0-9][a-z0-9\-]*\."
+    r"(com|net|org|co|io|info|biz|us|shop|store|app|gov|edu|online|site|xyz|live)"
+    r"(/.*)?$",
+    re.IGNORECASE,
+)
+
+
+def _is_ad_artist(artist: str) -> bool:
+    """True if `artist` looks like a domain name rather than a real artist."""
+    if not artist:
+        return False
+    a = artist.strip()
+    if " " in a:
+        return False
+    return bool(_AD_ARTIST_RE.match(a))
+
+
 @mcp.tool()
 def spotify_chart(country: str = "us", limit: int = 10) -> str:
     """
     Get Spotify streaming chart by country from kworb.net
-    
+
     Args:
         country: Country code (us, de, kr, fr, gb, jp, etc) - lowercase
         limit: Number of results (default 10, max 50)
-    
+
     Returns:
         Top streamed songs in the specified country
     """
-    import re
     cc = country.lower()
     url = f"https://kworb.net/spotify/country/{cc}_daily.html"
     try:
@@ -5964,8 +5985,8 @@ def radio_chart(country: str = "US", days: int = 7, limit: int = 10) -> str:
         with urllib.request.urlopen(url, timeout=10) as r:
             data = json.loads(r.read().decode())
         if isinstance(data, list):
-            # Filter out station names (require 3+ stations)
-            filtered = [d for d in data if d.get("stations", 0) >= 3][:limit]
+            # Filter out station names (require 3+ stations) and ad-injected domains
+            filtered = [d for d in data if d.get("stations", 0) >= 3 and not _is_ad_artist(d.get("artist", ""))][:limit]
             songs = [{"rank": i+1, "artist": s["artist"], "title": s["title"], "plays": s.get("plays",0), "stations": s.get("stations",0)} for i,s in enumerate(filtered)]
             return json.dumps({"source": "AirTune Radio Airplay", "country": cc, "period": f"last {days} days", "songs": songs}, indent=2)
         return json.dumps(data)
@@ -5984,12 +6005,13 @@ def global_radio_chart(days: int = 7, limit: int = 10) -> str:
     Returns:
         Top songs by global radio airplay
     """
-    url = f"https://api.airtune.ai/charts/songs?days={days}&limit={limit}"
+    url = f"https://api.airtune.ai/charts/songs?days={days}&limit={limit*3}"
     try:
         with urllib.request.urlopen(url, timeout=10) as r:
             data = json.loads(r.read().decode())
         if isinstance(data, list):
-            songs = [{"rank": i+1, "artist": s["artist"], "title": s["title"], "plays": s.get("plays",0), "stations": s.get("stations",0)} for i,s in enumerate(data)]
+            filtered = [d for d in data if not _is_ad_artist(d.get("artist", ""))][:limit]
+            songs = [{"rank": i+1, "artist": s["artist"], "title": s["title"], "plays": s.get("plays",0), "stations": s.get("stations",0)} for i,s in enumerate(filtered)]
             return json.dumps({"source": "AirTune Global Radio", "period": f"last {days} days", "songs": songs}, indent=2)
         return json.dumps(data)
     except Exception as e:
@@ -6006,12 +6028,12 @@ def rising_songs(limit: int = 10) -> str:
     Returns:
         Songs with the biggest airplay gains today
     """
-    url = f"https://api.airtune.ai/charts/rising?limit={limit}"
+    url = f"https://api.airtune.ai/charts/rising?limit={limit*3}"
     try:
         with urllib.request.urlopen(url, timeout=10) as r:
             data = json.loads(r.read().decode())
         if isinstance(data, dict) and "songs" in data:
-            songs = data["songs"][:limit]
+            songs = [s for s in data["songs"] if not _is_ad_artist(s.get("artist", ""))][:limit]
             return json.dumps({"source": "AirTune Rising", "songs": songs}, indent=2)
         return json.dumps(data)
     except Exception as e:
