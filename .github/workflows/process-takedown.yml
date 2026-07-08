@@ -11,7 +11,7 @@ permissions:
 jobs:
   process-takedown:
     if: contains(github.event.issue.labels.*.name, 'takedown')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, vps, python-ci]
 
     steps:
       - name: Checkout repository
