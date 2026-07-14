@@ -4473,20 +4473,76 @@ def dj_stop() -> dict:
 
 @mcp.tool()
 def dj_play_video(source: str, fullscreen: bool = False,
-                  ontop: bool = True) -> dict:
-    """Play a VIDEO in a window on the Mac's screen (with sound).
-
-    Unlike audio playback, this opens a real mpv window on the logged-in
-    desktop. Works for music videos, clips, or live streams (e.g. 24/7 news).
+                  ontop: bool = True, embed_only: bool = False) -> dict:
+    """Play a VIDEO - either embedded in chat or in external mpv window.
 
     Args:
         source: YouTube watch URL, a channel /live URL, or a search query
                 (e.g. "https://www.youtube.com/@ytnnews24/live",
                  "a-ha take on me", or a full watch URL).
-        fullscreen: Open fullscreen instead of a window.
-        ontop: Keep the window above other windows.
+        fullscreen: Open fullscreen instead of a window (external only).
+        ontop: Keep the window above other windows (external only).
+        embed_only: If True, return embed URL only (no mpv window). Default False.
     """
+    if embed_only:
+        return dj_video_embed(source)
     return _dj.play_video(source, fullscreen=fullscreen, ontop=ontop)
+
+
+@mcp.tool()
+def dj_video_embed(source: str) -> dict:
+    """Get YouTube embed URL for displaying video in chat (no external window).
+
+    Use this when you want to show a video inside the chat conversation
+    instead of opening an external mpv window.
+
+    Args:
+        source: YouTube URL or search query (e.g. "블랙핑크", "BTS DNA").
+
+    Returns:
+        videoId, embedUrl, youtubeUrl for embedding in chat UI.
+    """
+    import re
+    import subprocess
+    src = (source or "").strip()
+    if not src:
+        return {"status": "error", "error": "empty source"}
+
+    video_id = None
+    # Try to extract from URL
+    patterns = [
+        r'(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]{11})',
+        r'youtube\.com/live/([a-zA-Z0-9_-]{11})',
+        r'youtube\.com/shorts/([a-zA-Z0-9_-]{11})',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, src)
+        if match:
+            video_id = match.group(1)
+            break
+
+    # If no video ID found (search query), use yt-dlp
+    if not video_id:
+        try:
+            search_query = f"ytsearch1:{src}" if not src.startswith("http") else src
+            result = subprocess.run(
+                ["yt-dlp", "--get-id", "--no-warnings", search_query],
+                capture_output=True, text=True, timeout=15
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                video_id = result.stdout.strip().split("\n")[0]
+        except Exception as e:
+            return {"status": "error", "error": f"yt-dlp failed: {e}"}
+
+    if not video_id:
+        return {"status": "error", "error": "Could not find video"}
+
+    return {
+        "status": "ok",
+        "videoId": video_id,
+        "embedUrl": f"https://www.youtube.com/embed/{video_id}?autoplay=1",
+        "youtubeUrl": f"https://www.youtube.com/watch?v={video_id}"
+    }
 
 
 @mcp.tool()

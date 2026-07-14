@@ -1,5 +1,7 @@
 # radiomcp
 
+<!-- mcp-name: io.github.zeus-kim/radiomcp -->
+
 [![PyPI](https://img.shields.io/pypi/v/radiomcp)](https://pypi.org/project/radiomcp/)
 [![Python](https://img.shields.io/pypi/pyversions/radiomcp)](https://pypi.org/project/radiomcp/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)

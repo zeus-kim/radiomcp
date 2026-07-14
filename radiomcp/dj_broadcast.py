@@ -1409,7 +1409,7 @@ def _launch_video_once(url, fullscreen, ontop, geometry):
     except Exception:
         uid = "501"
     args = ["launchctl", "asuser", uid, MPV,
-            "--no-terminal", "--force-window=yes"]
+            "--no-terminal", "--force-window=immediate", "--ytdl"]
     if ontop:
         args.append("--ontop")
     if fullscreen:
@@ -1427,27 +1427,18 @@ def _launch_video_once(url, fullscreen, ontop, geometry):
 
 
 def _video_supervisor(source, fullscreen, ontop, geometry, keep_alive):
-    """Keep video playing: (re)resolve the stream URL and (re)launch mpv.
+    """Keep video playing: launch mpv with the source URL directly.
 
-    For live streams the resolved URL expires after a while and mpv exits;
-    when keep_alive is on we re-resolve and relaunch so playback never dies
-    until stop_video() is called. For finite videos (keep_alive off) we play
-    once and finish.
+    mpv handles ytdl internally (--force-window=immediate shows window fast).
+    For live streams with keep_alive, we relaunch mpv when it exits so
+    playback continues until stop_video() is called.
     """
     while not _video_stop.is_set():
-        url = _resolve_stream_url(source, video=True)
-        if not url:
-            _log_error(f"Video resolve failed: {source[:50]}")
-            if not keep_alive:
-                break
-            if _video_stop.wait(8):
-                break
-            continue
-
         if _video_stop.is_set():
             break
         subprocess.run(["pkill", "-f", "mpv --no-terminal"], capture_output=True)
-        _launch_video_once(url, fullscreen, ontop, geometry)
+        # Pass source directly to mpv (it handles ytdl internally)
+        _launch_video_once(source, fullscreen, ontop, geometry)
         _log_info(f"Video playing: {source[:50]} (keep_alive={keep_alive})")
 
         # Wait for mpv to appear, then watch until it exits.
@@ -1506,8 +1497,42 @@ def play_video(source, fullscreen=False, ontop=True,
     _write_state({"status": "video", "source": src,
                   "fullscreen": fullscreen, "keep_alive": keep_alive,
                   "started": datetime.now().isoformat()})
+
+    # Extract YouTube video ID for embed URL
+    embed_url = None
+    video_id = None
+    import re
+    patterns = [
+        r'(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]{11})',
+        r'youtube\.com/live/([a-zA-Z0-9_-]{11})',
+        r'youtube\.com/shorts/([a-zA-Z0-9_-]{11})',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, src)
+        if match:
+            video_id = match.group(1)
+            break
+
+    # If no video ID found (search query), use yt-dlp to find it
+    if not video_id:
+        try:
+            search_query = f"ytsearch1:{src}" if not src.startswith("http") else src
+            result = subprocess.run(
+                [YTDLP, "--get-id", "--no-warnings", search_query],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                video_id = result.stdout.strip().split("\n")[0]
+        except Exception:
+            pass
+
+    if video_id:
+        embed_url = f"https://www.youtube.com/embed/{video_id}?autoplay=1"
+
     return {"status": "started", "mode": "video", "source": src,
-            "fullscreen": fullscreen, "keep_alive": keep_alive}
+            "fullscreen": fullscreen, "keep_alive": keep_alive,
+            "videoId": video_id, "embedUrl": embed_url,
+            "youtubeUrl": f"https://www.youtube.com/watch?v={video_id}" if video_id else None}
 
 
 # ---- DJ voice comment (edge-tts or macOS say) ----
